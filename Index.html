@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Calculator</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        .calculator {
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .calculator-display {
+            background-color: #222;
+            color: #fff;
+            font-size: 2em;
+            padding: 20px;
+            text-align: right;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .calculator-keys {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+        }
+
+        .calculator-key {
+            background-color: #e0e0e0;
+            border: none;
+            padding: 20px;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .calculator-key:hover {
+            background-color: #d0d0d0;
+        }
+
+        .calculator-key:active {
+            background-color: #c0c0c0;
+        }
+
+        .key-operator {
+            background-color: #f0ad4e;
+            color: white;
+        }
+
+        .key-operator:hover {
+            background-color: #ec971f;
+        }
+
+        .key-operator:active {
+            background-color: #d58512;
+        }
+
+        .key-equals {
+            background-color: #5cb85c;
+            color: white;
+            grid-column: span 2;
+        }
+
+        .key-equals:hover {
+            background-color: #4cae4c;
+        }
+
+        .key-equals:active {
+            background-color: #449d44;
+        }
+
+        .key-clear {
+            background-color: #d9534f;
+            color: white;
+        }
+        .key-clear:hover {
+            background-color: #c9302c;
+        }
+        .key-clear:active {
+            background-color: #ac2925;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator">
+    <div class="calculator-display" id="display">0</div>
+    <div class="calculator-keys">
+        <button class="calculator-key key-operator" data-action="add">+</button>
+        <button class="calculator-key key-operator" data-action="subtract">-</button>
+        <button class="calculator-key key-operator" data-action="multiply">&times;</button>
+        <button class="calculator-key key-operator" data-action="divide">&divide;</button>
+
+        <button class="calculator-key" data-number="7">7</button>
+        <button class="calculator-key" data-number="8">8</button>
+        <button class="calculator-key" data-number="9">9</button>
+
+
+        <button class="calculator-key" data-number="4">4</button>
+        <button class="calculator-key" data-number="5">5</button>
+        <button class="calculator-key" data-number="6">6</button>
+
+
+        <button class="calculator-key" data-number="1">1</button>
+        <button class="calculator-key" data-number="2">2</button>
+        <button class="calculator-key" data-number="3">3</button>
+
+
+        <button class="calculator-key" data-number="0">0</button>
+        <button class="calculator-key" data-action="decimal">.</button>
+        <button class="calculator-key key-clear" data-action="clear">C</button>
+        <button class="calculator-key key-equals" data-action="calculate">=</button>
+    </div>
+</div>
+
+<script>
+    const display = document.getElementById('display');
+    const keys = document.querySelector('.calculator-keys');
+
+    let displayValue = '0';
+    let firstValue = null;
+    let operator = null;
+    let waitingForSecondValue = false;
+
+    function updateDisplay() {
+        display.textContent = displayValue;
+    }
+
+    updateDisplay();
+
+    keys.addEventListener('click', (event) => {
+        const { target } = event;
+        const { action } = target.dataset;
+        const keyContent = target.textContent;
+        const number = target.dataset.number;
+
+        if (!target.matches('button')) {
+            return;
+        }
+
+        if (number) {
+            if (waitingForSecondValue) {
+                displayValue = keyContent;
+                waitingForSecondValue = false;
+            } else {
+                displayValue = displayValue === '0' ? keyContent : displayValue + keyContent;
+            }
+        }
+
+        if (action === 'decimal') {
+            if (waitingForSecondValue) {
+                displayValue = '0.';
+                waitingForSecondValue = false;
+                updateDisplay();
+                return;
+            }
+            if (!displayValue.includes('.')) {
+                displayValue += '.';
+            }
+        }
+
+        if (action === 'add' || action === 'subtract' || action === 'multiply' || action === 'divide') {
+            if (operator && waitingForSecondValue)  {
+                operator = action;
+                return;
+            }
+
+            if (firstValue === null && !isNaN(parseFloat(displayValue))) {
+                firstValue = parseFloat(displayValue);
+            } else if (operator) {
+                const result = calculate(firstValue, parseFloat(displayValue), operator);
+                displayValue = `${parseFloat(result.toFixed(7))}`; // Limit decimal places
+                firstValue = result;
+            }
+
+            waitingForSecondValue = true;
+            operator = action;
+        }
+
+        if (action === 'clear') {
+            displayValue = '0';
+            firstValue = null;
+            operator = null;
+            waitingForSecondValue = false;
+        }
+
+        if (action === 'calculate') {
+            if (firstValue !== null && operator && !waitingForSecondValue) {
+                const result = calculate(firstValue, parseFloat(displayValue), operator);
+                displayValue = `${parseFloat(result.toFixed(7))}`; // Limit decimal places
+                firstValue = null; // Reset for next calculation
+                operator = null;
+                waitingForSecondValue = true; // Wait for new number after equals
+            }
+        }
+
+        updateDisplay();
+    });
+
+    function calculate(first, second, op) {
+        if (op === 'add') return first + second;
+        if (op === 'subtract') return first - second;
+        if (op === 'multiply') return first * second;
+        if (op === 'divide') {
+            if (second === 0) {
+                alert("Cannot divide by zero!");
+                return first; // Or handle error appropriately
+            }
+            return first / second;
+        }
+        return second; // Should not happen
+    }
+</script>
+
+</body>
+</html>
